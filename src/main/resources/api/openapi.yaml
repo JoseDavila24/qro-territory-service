@@ -1,0 +1,658 @@
+openapi: 3.0.3
+info:
+  title: QroTerritoryService API
+  version: 1.0.0
+  description: >-
+    API REST para consultar el catálogo de delegaciones municipales de Querétaro
+    y sus colonias asociadas.
+
+    Permite que otros sistemas y aplicaciones obtengan dinámicamente
+    la lista de colonias de una delegación, facilitando la integración
+    en formularios de captura de direcciones (por ejemplo, al seleccionar
+    una delegación se llena automáticamente el campo de colonia).
+  contact:
+    name: Equipo de Microservicios y Contenedores
+    email: l22140248@queretaro.tecnm.mx
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+servers:
+  - url: http://localhost:8080/api/v1
+    description: Desarrollo
+tags:
+  - name: Delegaciones
+    description: Consulta de delegaciones municipales
+  - name: Colonias Públicas
+    description: Consulta de colonias sin autenticación
+  - name: Colonias Admin
+    description: Gestión de colonias con autenticación
+components:
+  securitySchemes:
+    ApiKeyAuth:
+      type: apiKey
+      in: header
+      name: X-API-KEY
+      description: Clave secreta para operaciones administrativas
+  schemas:
+    Delegacion:
+      type: object
+      title: Delegación Municipal
+      required:
+        - id
+        - nombre
+      properties:
+        id:
+          type: integer
+          minimum: 1
+          description: Identificador único
+        nombre:
+          type: string
+          minLength: 3
+          maxLength: 100
+          description: Nombre oficial
+        sede:
+          type: string
+          nullable: true
+          maxLength: 255
+          description: Dirección
+    TipoAsentamiento:
+      type: string
+      enum:
+        - FRACCIONAMIENTO
+        - BARRIO
+        - COLONIA
+        - CONDOMINIO
+        - UNIDAD_HABITACIONAL
+        - PUEBLO
+        - EJIDO
+        - ZONA_INDUSTRIAL
+        - ZONA_COMERCIAL
+        - EQUIPAMIENTO
+        - RANCHERIA
+    NombreDelegacion:
+      type: string
+      description: Catálogo de delegaciones municipales del municipio de Querétaro
+      enum:
+        - SANTA_ROSA_JAUREGUI
+        - CENTRO_HISTORICO
+        - VILLA_CAYETANO_RUBIO
+        - JOSEFA_VERGARA
+        - FELIX_OSORES_SOTOMAYOR
+        - FELIPE_CARRILLO_PUERTO
+        - EPIGMENIO_GONZALEZ
+    Colonia:
+      type: object
+      title: Colonia
+      required:
+        - id
+        - nombre
+        - codigo_postal
+        - tipo_asentamiento
+        - delegacion_id
+      properties:
+        id:
+          type: integer
+          minimum: 1
+          readOnly: true
+          description: Identificador único (autogenerado)
+        nombre:
+          type: string
+          minLength: 2
+          maxLength: 150
+        codigo_postal:
+          type: string
+          pattern: '^\d{5}$'
+        tipo_asentamiento:
+          $ref: "#/components/schemas/TipoAsentamiento"
+        delegacion_id:
+          type: integer
+          minimum: 1
+    ColoniaInput:
+      type: object
+      title: Solicitud de Colonia
+      required:
+        - nombre
+        - codigo_postal
+        - tipo_asentamiento
+        - delegacion_id
+      properties:
+        nombre:
+          type: string
+          minLength: 2
+          maxLength: 150
+          pattern: "^[A-ZÁÉÍÓÚÜÑ].*"
+          description: Debe iniciar con letra mayúscula
+        codigo_postal:
+          type: string
+          pattern: '^\d{5}$'
+        tipo_asentamiento:
+          $ref: "#/components/schemas/TipoAsentamiento"
+        delegacion_id:
+          type: integer
+          minimum: 1
+    Error:
+      type: object
+      title: Error Response
+      required:
+        - status
+        - error
+        - message
+      properties:
+        status:
+          type: integer
+        error:
+          type: string
+        message:
+          type: string
+        timestamp:
+          type: string
+          format: date-time
+paths:
+  /delegaciones:
+    get:
+      operationId: listDelegaciones
+      summary: Listar todas las delegaciones
+      tags:
+        - Delegaciones
+      responses:
+        "200":
+          description: Catálogo completo
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Delegacion"
+              examples:
+                success:
+                  summary: Listado de 7 delegaciones
+                  value:
+                    - id: 1
+                      nombre: Santa Rosa Jáuregui
+                      sede: Agapito Pozo s/n, CP 76220
+                    - id: 2
+                      nombre: Centro Histórico
+                      sede: Calle Madero 81 Pte., CP 76000
+                    - id: 3
+                      nombre: Villa Cayetano Rubio
+                      sede: Avenida del Río núm. 1, CP 76209
+                    - id: 4
+                      nombre: Josefa Vergara
+                      sede: Calle 21 núm. 1000, CP 76086
+                    - id: 5
+                      nombre: Félix Osores Sotomayor
+                      sede: Avenida de la Luz núm. 602
+                    - id: 6
+                      nombre: Felipe Carrillo Puerto
+                      sede: Calzada Guadalupe núm. 103, CP 76138
+                    - id: 7
+                      nombre: Epigmenio González
+                      sede: Calle Tláloc núm. 100, CP 76130
+        "500":
+          description: Error del servidor
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+              examples:
+                error:
+                  summary: Error de conectividad
+                  value:
+                    status: 500
+                    error: Internal Server Error
+                    message: Error inesperado del servidor.
+                    timestamp: "2026-04-27T15:30:45.123Z"
+  /delegaciones/{delegacionId}:
+    get:
+      operationId: getDelegacionById
+      summary: Obtener una delegación por ID
+      tags:
+        - Delegaciones
+      parameters:
+        - name: delegacionId
+          in: path
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+          description: ID de la delegación
+      responses:
+        "200":
+          description: Detalle de la delegación
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Delegacion"
+              examples:
+                success:
+                  summary: Centro Histórico
+                  value:
+                    id: 2
+                    nombre: Centro Histórico
+                    sede: Calle Madero 81 Pte., CP 76000
+        "400":
+          description: ID inválido
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+              examples:
+                error:
+                  summary: ID con formato inválido
+                  value:
+                    status: 400
+                    error: Bad Request
+                    message: El ID debe ser un número entero positivo
+                    timestamp: "2026-04-27T15:30:45.123Z"
+        "404":
+          description: Delegación no existe
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+              examples:
+                error:
+                  summary: Delegación no encontrada
+                  value:
+                    status: 404
+                    error: Not Found
+                    message: La delegación con ID 99 no existe
+                    timestamp: "2026-04-27T15:30:45.123Z"
+        "500":
+          description: Error del servidor
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+              examples:
+                error:
+                  summary: Error de conectividad
+                  value:
+                    status: 500
+                    error: Internal Server Error
+                    message: Error inesperado del servidor.
+                    timestamp: "2026-04-27T15:30:45.123Z"
+  /colonias:
+    get:
+      operationId: listColoniasByDelegacion
+      summary: Listar colonias de una delegación
+      tags:
+        - Colonias Públicas
+      parameters:
+        - name: delegacion
+          in: query
+          required: true
+          schema:
+            $ref: "#/components/schemas/NombreDelegacion"
+          description: Nombre de la delegación municipal
+      responses:
+        "200":
+          description: Lista de colonias
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Colonia"
+              examples:
+                success:
+                  summary: Colonias de Centro Histórico
+                  value:
+                    - id: 1
+                      nombre: Centro
+                      codigo_postal: "76021"
+                      tipo_asentamiento: COLONIA
+                      delegacion_id: 2
+                    - id: 2
+                      nombre: San José Inn
+                      codigo_postal: "76021"
+                      tipo_asentamiento: COLONIA
+                      delegacion_id: 2
+                    - id: 3
+                      nombre: La Cruz
+                      codigo_postal: "76021"
+                      tipo_asentamiento: FRACCIONAMIENTO
+                      delegacion_id: 2
+        "400":
+          description: Parámetro faltante
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+              examples:
+                error:
+                  summary: Parámetro obligatorio faltante
+                  value:
+                    status: 400
+                    error: Bad Request
+                    message: El parámetro 'delegacion' es obligatorio
+                    timestamp: "2026-04-27T15:30:45.123Z"
+        "404":
+          description: Delegación no existe
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+              examples:
+                error:
+                  summary: Delegación no encontrada
+                  value:
+                    status: 404
+                    error: Not Found
+                    message: La delegación 'CENTRO_HISTORICO' no existe
+                    timestamp: "2026-04-27T15:30:45.123Z"
+        "500":
+          description: Error del servidor
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+              examples:
+                error:
+                  summary: Error de conectividad
+                  value:
+                    status: 500
+                    error: Internal Server Error
+                    message: Error inesperado del servidor.
+                    timestamp: "2026-04-27T15:30:45.123Z"
+  /colonias/{coloniaId}:
+    get:
+      operationId: getColoniaById
+      summary: Obtener una colonia por ID
+      tags:
+        - Colonias Públicas
+      parameters:
+        - name: coloniaId
+          in: path
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+          description: ID de la colonia
+      responses:
+        "200":
+          description: Detalle de la colonia
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Colonia"
+              examples:
+                success:
+                  summary: Colonia Centro
+                  value:
+                    id: 1
+                    nombre: Centro
+                    codigo_postal: "76021"
+                    tipo_asentamiento: COLONIA
+                    delegacion_id: 2
+        "400":
+          description: ID inválido
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+              examples:
+                error:
+                  summary: ID con formato inválido
+                  value:
+                    status: 400
+                    error: Bad Request
+                    message: El ID debe ser un número entero positivo
+                    timestamp: "2026-04-27T15:30:45.123Z"
+        "404":
+          description: Colonia no existe
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+              examples:
+                error:
+                  summary: Colonia no encontrada
+                  value:
+                    status: 404
+                    error: Not Found
+                    message: La colonia con ID 500 no existe
+                    timestamp: "2026-04-27T15:30:45.123Z"
+        "500":
+          description: Error del servidor
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+              examples:
+                error:
+                  summary: Error de conectividad
+                  value:
+                    status: 500
+                    error: Internal Server Error
+                    message: Error inesperado del servidor.
+                    timestamp: "2026-04-27T15:30:45.123Z"
+  /admin/colonias:
+    post:
+      operationId: createColonia
+      summary: Crear nueva colonia
+      tags:
+        - Colonias Admin
+      security:
+        - ApiKeyAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ColoniaInput"
+            examples:
+              success:
+                summary: Crear colonia La Cruz
+                value:
+                  nombre: La Cruz
+                  codigo_postal: "76021"
+                  tipo_asentamiento: FRACCIONAMIENTO
+                  delegacion_id: 2
+      responses:
+        "201":
+          description: Colonia creada
+          headers:
+            Location:
+              schema:
+                type: string
+              description: URI de la colonia creada
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Colonia"
+              examples:
+                success:
+                  summary: Colonia creada con ID autogenerado
+                  value:
+                    id: 3
+                    nombre: La Cruz
+                    codigo_postal: "76021"
+                    tipo_asentamiento: FRACCIONAMIENTO
+                    delegacion_id: 2
+        "400":
+          description: Datos inválidos
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+              examples:
+                codigoPostalInvalido:
+                  summary: Código postal inválido
+                  value:
+                    status: 400
+                    error: Bad Request
+                    message: "codigoPostal: El código postal debe contener exactamente 5 dígitos"
+                    timestamp: "2026-04-27T15:30:45.123Z"
+                nombreSinMayuscula:
+                  summary: Nombre sin mayúscula inicial
+                  value:
+                    status: 400
+                    error: Bad Request
+                    message: "nombre: El nombre debe iniciar con mayúscula"
+                    timestamp: "2026-04-27T15:30:45.123Z"
+        "401":
+          description: API Key inválida
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+              examples:
+                error:
+                  summary: Autenticación fallida
+                  value:
+                    status: 401
+                    error: Unauthorized
+                    message: API Key inválida o no proporcionada
+                    timestamp: "2026-04-27T15:30:45.123Z"
+        "422":
+          description: Validación de negocio fallida
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+              examples:
+                error:
+                  summary: Delegación no existe
+                  value:
+                    status: 422
+                    error: Unprocessable Entity
+                    message: La delegación con ID 99 no existe
+                    timestamp: "2026-04-27T15:30:45.123Z"
+        "500":
+          description: Error del servidor
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+              examples:
+                error:
+                  summary: Error de conectividad
+                  value:
+                    status: 500
+                    error: Internal Server Error
+                    message: Error inesperado del servidor.
+                    timestamp: "2026-04-27T15:30:45.123Z"
+  /admin/colonias/{coloniaId}:
+    put:
+      operationId: updateColonia
+      summary: Actualizar colonia existente
+      tags:
+        - Colonias Admin
+      security:
+        - ApiKeyAuth: []
+      parameters:
+        - name: coloniaId
+          in: path
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+          description: ID de la colonia
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ColoniaInput"
+            examples:
+              success:
+                summary: Actualizar nombre de colonia
+                value:
+                  nombre: Centro Histórico
+                  codigo_postal: "76021"
+                  tipo_asentamiento: COLONIA
+                  delegacion_id: 2
+      responses:
+        "200":
+          description: Colonia actualizada
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Colonia"
+              examples:
+                success:
+                  summary: Colonia actualizada
+                  value:
+                    id: 1
+                    nombre: Centro Histórico
+                    codigo_postal: "76021"
+                    tipo_asentamiento: COLONIA
+                    delegacion_id: 2
+        "400":
+          description: Datos inválidos
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+              examples:
+                codigoPostalInvalido:
+                  summary: Código postal inválido
+                  value:
+                    status: 400
+                    error: Bad Request
+                    message: "codigoPostal: El código postal debe contener exactamente 5 dígitos"
+                    timestamp: "2026-04-27T15:30:45.123Z"
+                nombreSinMayuscula:
+                  summary: Nombre sin mayúscula inicial
+                  value:
+                    status: 400
+                    error: Bad Request
+                    message: "nombre: El nombre debe iniciar con mayúscula"
+                    timestamp: "2026-04-27T15:30:45.123Z"
+        "401":
+          description: API Key inválida
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+              examples:
+                error:
+                  summary: Autenticación fallida
+                  value:
+                    status: 401
+                    error: Unauthorized
+                    message: API Key inválida o no proporcionada
+                    timestamp: "2026-04-27T15:30:45.123Z"
+        "404":
+          description: Colonia no existe
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+              examples:
+                error:
+                  summary: Colonia no encontrada
+                  value:
+                    status: 404
+                    error: Not Found
+                    message: La colonia con ID 500 no existe
+                    timestamp: "2026-04-27T15:30:45.123Z"
+        "422":
+          description: Validación de negocio fallida
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+              examples:
+                error:
+                  summary: Delegación no existe
+                  value:
+                    status: 422
+                    error: Unprocessable Entity
+                    message: La delegación con ID 99 no existe
+                    timestamp: "2026-04-27T15:30:45.123Z"
+        "500":
+          description: Error del servidor
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+              examples:
+                error:
+                  summary: Error de conectividad
+                  value:
+                    status: 500
+                    error: Internal Server Error
+                    message: Error inesperado del servidor.
+                    timestamp: "2026-04-27T15:30:45.123Z"
