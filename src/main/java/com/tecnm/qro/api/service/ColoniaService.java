@@ -4,6 +4,7 @@ import com.tecnm.qro.api.entity.ColoniaEntity;
 import com.tecnm.qro.api.entity.DelegacionEntity;
 import com.tecnm.qro.api.model.Colonia;
 import com.tecnm.qro.api.model.ColoniaInput;
+import com.tecnm.qro.api.model.Error;
 import com.tecnm.qro.api.model.NombreDelegacion;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.transaction.Transactional;
@@ -11,8 +12,8 @@ import jakarta.ws.rs.NotFoundException;
 import jakarta.ws.rs.WebApplicationException;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
+import java.time.OffsetDateTime;
 import java.util.List;
-import java.util.Map;
 
 @ApplicationScoped
 public class ColoniaService {
@@ -82,11 +83,11 @@ public class ColoniaService {
         return new WebApplicationException(
                 Response.status(422)
                         .type(MediaType.APPLICATION_JSON)
-                        .entity(Map.of(
-                                "status", 422,
-                                "error", "Unprocessable Entity",
-                                "message", message
-                        ))
+                        .entity(new Error()
+                                .status(422)
+                                .error("Unprocessable Entity")
+                                .message(message)
+                                .timestamp(OffsetDateTime.now()))
                         .build()
         );
     }

@@ -1,11 +1,12 @@
 package com.tecnm.qro.api.mapper;
 
+import com.tecnm.qro.api.model.Error;
 import jakarta.ws.rs.NotFoundException;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 import jakarta.ws.rs.ext.ExceptionMapper;
 import jakarta.ws.rs.ext.Provider;
-import java.util.Map;
+import java.time.OffsetDateTime;
 
 @Provider
 public class NotFoundExceptionMapper implements ExceptionMapper<NotFoundException> {
@@ -14,11 +15,11 @@ public class NotFoundExceptionMapper implements ExceptionMapper<NotFoundExceptio
     public Response toResponse(NotFoundException e) {
         return Response.status(Response.Status.NOT_FOUND)
                 .type(MediaType.APPLICATION_JSON)
-                .entity(Map.of(
-                        "status", 404,
-                        "error", "Not Found",
-                        "message", e.getMessage() != null ? e.getMessage() : "Recurso no encontrado"
-                ))
+                .entity(new Error()
+                        .status(404)
+                        .error("Not Found")
+                        .message(e.getMessage() != null ? e.getMessage() : "Recurso no encontrado")
+                        .timestamp(OffsetDateTime.now()))
                 .build();
     }
 }
