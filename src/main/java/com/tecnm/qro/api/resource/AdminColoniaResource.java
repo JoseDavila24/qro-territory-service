@@ -5,6 +5,7 @@ import com.tecnm.qro.api.model.ColoniaInput;
 import com.tecnm.qro.api.service.ColoniaService;
 import jakarta.inject.Inject;
 import jakarta.validation.Valid;
+import jakarta.ws.rs.BadRequestException;
 import jakarta.ws.rs.Consumes;
 import jakarta.ws.rs.POST;
 import jakarta.ws.rs.PUT;
@@ -32,7 +33,17 @@ public class AdminColoniaResource {
 
     @PUT
     @Path("/{id}")
-    public Colonia update(@PathParam("id") Long id, @Valid ColoniaInput input) {
-        return service.update(id, input);
+    public Colonia update(@PathParam("id") String idParam, @Valid ColoniaInput input) {
+        return service.update(parseId(idParam), input);
+    }
+
+    private static long parseId(String value) {
+        try {
+            long id = Long.parseLong(value);
+            if (id < 1) throw new NumberFormatException();
+            return id;
+        } catch (NumberFormatException e) {
+            throw new BadRequestException("El ID debe ser un número entero positivo");
+        }
     }
 }
