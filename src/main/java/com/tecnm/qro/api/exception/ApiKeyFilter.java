@@ -1,4 +1,4 @@
-package com.tecnm.qro.api.mapper;
+package com.tecnm.qro.api.exception;
 
 import com.tecnm.qro.api.model.Error;
 import jakarta.enterprise.context.ApplicationScoped;

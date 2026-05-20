@@ -1,4 +1,4 @@
-package com.tecnm.qro.api.mapper;
+package com.tecnm.qro.api.exception;
 
 import com.tecnm.qro.api.model.Error;
 import jakarta.validation.ConstraintViolationException;
@@ -17,7 +17,6 @@ public class ValidationExceptionMapper implements ExceptionMapper<ConstraintViol
         String message = e.getConstraintViolations().stream()
                 .map(cv -> {
                     String field = cv.getPropertyPath().toString();
-                    // strip method prefix (e.g. "create.input.nombre" → "nombre")
                     int dot = field.lastIndexOf('.');
                     return (dot >= 0 ? field.substring(dot + 1) : field) + ": " + cv.getMessage();
                 })

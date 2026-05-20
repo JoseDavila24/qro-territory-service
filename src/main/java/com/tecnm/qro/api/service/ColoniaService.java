@@ -2,11 +2,13 @@ package com.tecnm.qro.api.service;
 
 import com.tecnm.qro.api.entity.ColoniaEntity;
 import com.tecnm.qro.api.entity.DelegacionEntity;
+import com.tecnm.qro.api.mapper.ColoniaMapper;
 import com.tecnm.qro.api.model.Colonia;
 import com.tecnm.qro.api.model.ColoniaInput;
 import com.tecnm.qro.api.model.Error;
 import com.tecnm.qro.api.model.NombreDelegacion;
 import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
 import jakarta.ws.rs.NotFoundException;
 import jakarta.ws.rs.WebApplicationException;
@@ -18,6 +20,9 @@ import java.util.List;
 @ApplicationScoped
 public class ColoniaService {
 
+    @Inject
+    ColoniaMapper mapper;
+
     @Transactional
     public List<Colonia> findByDelegacion(NombreDelegacion clave) {
         DelegacionEntity delegacion = DelegacionEntity.findByClave(clave);
@@ -26,7 +31,7 @@ public class ColoniaService {
         }
         return ColoniaEntity.findByDelegacion(delegacion)
                 .stream()
-                .map(this::toDto)
+                .map(mapper::toDto)
                 .toList();
     }
 
@@ -36,7 +41,7 @@ public class ColoniaService {
         if (entity == null) {
             throw new NotFoundException("La colonia con ID " + id + " no existe");
         }
-        return toDto(entity);
+        return mapper.toDto(entity);
     }
 
     @Transactional
@@ -45,13 +50,9 @@ public class ColoniaService {
         if (delegacion == null) {
             throw unprocessable("La delegación con ID " + input.getDelegacionId() + " no existe");
         }
-        ColoniaEntity entity = new ColoniaEntity();
-        entity.nombre = input.getNombre();
-        entity.codigoPostal = input.getCodigoPostal();
-        entity.tipoAsentamiento = input.getTipoAsentamiento();
-        entity.delegacion = delegacion;
+        ColoniaEntity entity = mapper.toNewEntity(input, delegacion);
         entity.persist();
-        return toDto(entity);
+        return mapper.toDto(entity);
     }
 
     @Transactional
@@ -64,19 +65,8 @@ public class ColoniaService {
         if (delegacion == null) {
             throw unprocessable("La delegación con ID " + input.getDelegacionId() + " no existe");
         }
-        entity.nombre = input.getNombre();
-        entity.codigoPostal = input.getCodigoPostal();
-        entity.tipoAsentamiento = input.getTipoAsentamiento();
-        entity.delegacion = delegacion;
-        return toDto(entity);
-    }
-
-    private Colonia toDto(ColoniaEntity entity) {
-        return new Colonia(entity.id.intValue())
-                .nombre(entity.nombre)
-                .codigoPostal(entity.codigoPostal)
-                .tipoAsentamiento(entity.tipoAsentamiento)
-                .delegacionId(entity.delegacion.id.intValue());
+        mapper.updateEntity(entity, input, delegacion);
+        return mapper.toDto(entity);
     }
 
     private WebApplicationException unprocessable(String message) {
