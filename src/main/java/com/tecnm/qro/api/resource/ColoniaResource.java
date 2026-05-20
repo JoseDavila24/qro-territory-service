@@ -21,9 +21,15 @@ public class ColoniaResource {
     ColoniaService service;
 
     @GET
-    public List<Colonia> listByDelegacion(@QueryParam("delegacion") NombreDelegacion clave) {
-        if (clave == null) {
+    public List<Colonia> listByDelegacion(@QueryParam("delegacion") String delegacionParam) {
+        if (delegacionParam == null || delegacionParam.isBlank()) {
             throw new BadRequestException("El parámetro 'delegacion' es obligatorio");
+        }
+        NombreDelegacion clave;
+        try {
+            clave = NombreDelegacion.fromValue(delegacionParam);
+        } catch (IllegalArgumentException e) {
+            throw new BadRequestException("Valor inválido para 'delegacion': '" + delegacionParam + "'");
         }
         return service.findByDelegacion(clave);
     }
