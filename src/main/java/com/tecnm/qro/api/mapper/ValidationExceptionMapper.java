@@ -1,4 +1,4 @@
-package com.tecnm.qro.api.exception;
+package com.tecnm.qro.api.mapper;
 
 import jakarta.validation.ConstraintViolationException;
 import jakarta.ws.rs.core.MediaType;

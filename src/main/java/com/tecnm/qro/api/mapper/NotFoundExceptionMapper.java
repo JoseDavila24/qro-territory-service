@@ -1,4 +1,4 @@
-package com.tecnm.qro.api.exception;
+package com.tecnm.qro.api.mapper;
 
 import jakarta.ws.rs.NotFoundException;
 import jakarta.ws.rs.core.MediaType;
