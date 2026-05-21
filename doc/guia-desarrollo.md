@@ -74,6 +74,27 @@ mvn package -DskipTests
 mvn clean
 ```
 
+### Generar imagen de producción
+
+Estos comandos se ejecutan **desde el host** (fuera del contenedor), en la raíz del proyecto.
+
+```bash
+# 1. Empaquetar el JAR dentro del contenedor de desarrollo
+docker compose exec app mvn clean package -DskipTests
+
+# 2. Construir la imagen JVM
+docker build -f src/main/docker/Dockerfile.jvm -t qro-territory-service:1.0.0 .
+
+# 3. Taggear con el usuario de Docker Hub
+docker image tag qro-territory-service:1.0.0 josedavila784/qro-territory-service:1.0.0
+
+# 4. Subir a Docker Hub (requiere docker login previo)
+docker login
+docker push josedavila784/qro-territory-service:1.0.0
+```
+
+> El JAR generado en el paso 1 queda en `target/quarkus-app/`. El `Dockerfile.jvm` lo copia al construir la imagen.
+
 ## 5. Comandos útiles de Docker Compose (desde el host)
 
 ```bash

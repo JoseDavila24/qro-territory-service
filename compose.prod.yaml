@@ -20,7 +20,7 @@ services:
       start_period: 30s
 
   app:
-    image: josedavila784/qro-territory-service:1.0.0-SNAPSHOT
+    image: josedavila784/qro-territory-service:1.0.0
     container_name: qro-app-prod
     depends_on:
       mysql:
@@ -29,7 +29,7 @@ services:
       QUARKUS_DATASOURCE_USERNAME: qro_user
       QUARKUS_DATASOURCE_PASSWORD: qro_pass
       QUARKUS_DATASOURCE_JDBC_URL: jdbc:mysql://mysql:3306/qro_territory
-      QUARKUS_HIBERNATE_ORM_SCHEMA_MANAGEMENT_STRATEGY: update
+      APP_API_KEY: ${APP_API_KEY:-changeme}
     ports:
       - "8080:8080"
 

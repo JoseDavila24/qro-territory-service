@@ -21,15 +21,15 @@ docker compose -f compose.prod.yaml up -d
 
 La primera vez descarga las imágenes automáticamente. El flag `-d` corre los contenedores en segundo plano.
 
-### ¿Qué ocurre al arrancar por primera vez?
+### ¿Qué ocurre al arrancar?
 
 1. Se levanta MySQL y espera a estar listo (healthcheck)
-2. Arranca la aplicación y detecta que las tablas no existen
-3. Hibernate crea el schema (tablas `delegacion` y `colonia`)
-4. Se ejecuta `import.sql`: carga 7 delegaciones y 949 colonias
+2. Arranca la aplicación
+3. Hibernate elimina las tablas existentes y las recrea desde las entidades JPA
+4. Se ejecuta `import.sql`: carga 7 delegaciones y sus colonias
 5. La API queda disponible en `http://localhost:8080`
 
-En reinicios posteriores los pasos 3 y 4 se omiten — los datos persisten.
+> Esto ocurre **en cada arranque** porque la estrategia es `drop-and-create`. Los datos siempre parten del estado inicial definido en `import.sql`. Cualquier colonia creada vía API se pierde al reiniciar.
 
 ---
 
@@ -107,11 +107,11 @@ El flag `-v` elimina el volumen de MySQL. La próxima vez que levantes el servic
 
 ## Estrategia de datos
 
-Se usa `schema-management.strategy=update`:
+Se usa `schema-management.strategy=drop-and-create`:
 
-- Las tablas **no se borran** en cada reinicio
-- El script de datos solo corre en el **primer arranque** (tablas vacías)
-- Colonias creadas vía API **persisten** entre reinicios
-- Los datos de MySQL se guardan en el volumen Docker `mysql_data`
+- Las tablas se **eliminan y recrean en cada arranque** del contenedor de la app
+- `import.sql` corre **siempre** al iniciar — el catálogo queda en su estado original
+- Colonias creadas vía API **no persisten** entre reinicios
+- El volumen `mysql_prod_data` guarda los archivos de MySQL, pero los datos de las tablas se reinician con la app
 
-Para hacer un reseteo completo de datos usa `docker compose -f compose.prod.yaml down -v`.
+Para un reseteo completo (incluyendo el volumen de MySQL) usa `docker compose -f compose.prod.yaml down -v`.
