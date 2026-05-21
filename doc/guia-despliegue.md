@@ -1,6 +1,6 @@
 # Guía de Despliegue — qro-territory-service
 
-Imagen publicada en Docker Hub: `josedavila784/qro-territory-service:1.0.0-SNAPSHOT`
+Imagen publicada en Docker Hub: `josedavila784/qro-territory-service:1.0.0`
 
 ---
 
