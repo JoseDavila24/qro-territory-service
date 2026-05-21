@@ -961,6 +961,9 @@ INSERT INTO colonia (id, nombre, codigo_postal, tipo_asentamiento, delegacion_id
 INSERT INTO colonia (id, nombre, codigo_postal, tipo_asentamiento, delegacion_id) VALUES (948, 'Nuevo Horizonte', '76238', 'COLONIA', 7);
 INSERT INTO colonia (id, nombre, codigo_postal, tipo_asentamiento, delegacion_id) VALUES (949, 'Prados del Mirador (Cuesta China)', '76238', 'COLONIA', 4);
 
--- Evita colisión entre IDs fijos y los generados por autoincremento
-ALTER TABLE delegacion AUTO_INCREMENT = 10;
-ALTER TABLE colonia AUTO_INCREMENT = 100;
+-- Sincronizar secuencias de Hibernate con el máximo ID sembrado
+-- (colonia_SEQ y delegacion_SEQ no se recrean con drop-and-create, hay que resetearlas manualmente)
+DELETE FROM delegacion_SEQ;
+INSERT INTO delegacion_SEQ (next_val) VALUES (101);
+DELETE FROM colonia_SEQ;
+INSERT INTO colonia_SEQ    (next_val) VALUES (1001);

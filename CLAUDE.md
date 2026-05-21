@@ -31,7 +31,7 @@ Health: `GET /q/health` | Metrics: `GET /metrics`
 - **Hibernate ORM with Panache** — use the active record pattern (`entity.persist()`, `Entity.findById()`)
 - **Jakarta REST** (JAX-RS) for REST resources
 - **Hibernate Validator** for bean validation
-- **MySQL 8.0** via JDBC; schema managed by `quarkus.hibernate-orm.database.generation=update`
+- **MySQL 8.0** via JDBC; schema managed by `quarkus.hibernate-orm.schema-management.strategy=update`
 - **SmallRye Health** + **Micrometer/Prometheus** for observability
 
 ## Architecture

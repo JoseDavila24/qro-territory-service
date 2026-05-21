@@ -28,11 +28,9 @@ services:
       mysql:
         condition: service_healthy
     environment:
-      QUARKUS_DATASOURCE_DB_KIND: mysql
       QUARKUS_DATASOURCE_USERNAME: ${MYSQL_USER:-qro_user}
       QUARKUS_DATASOURCE_PASSWORD: ${MYSQL_PASSWORD:-qro_pass}
       QUARKUS_DATASOURCE_JDBC_URL: jdbc:mysql://mysql:3306/${MYSQL_DATABASE:-qro_territory}
-      QUARKUS_HIBERNATE_ORM_DATABASE_GENERATION: update
     ports:
       - "8080:8080"
       - "5005:5005"
