@@ -1,0 +1,37 @@
+services:
+
+  mysql:
+    image: mysql:8.0
+    container_name: qro-mysql-prod
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: qro_territory
+      MYSQL_USER: qro_user
+      MYSQL_PASSWORD: qro_pass
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-proot"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+
+  app:
+    image: josedavila784/qro-territory-service:1.0.0-SNAPSHOT
+    container_name: qro-app-prod
+    depends_on:
+      mysql:
+        condition: service_healthy
+    environment:
+      QUARKUS_DATASOURCE_USERNAME: qro_user
+      QUARKUS_DATASOURCE_PASSWORD: qro_pass
+      QUARKUS_DATASOURCE_JDBC_URL: jdbc:mysql://mysql:3306/qro_territory
+      QUARKUS_HIBERNATE_ORM_SCHEMA_MANAGEMENT_STRATEGY: update
+    ports:
+      - "8080:8080"
+
+volumes:
+  mysql_data:
