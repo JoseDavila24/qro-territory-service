@@ -153,17 +153,17 @@ Estos comandos se ejecutan **desde el host** (fuera del contenedor).
 docker compose exec app mvn clean package -DskipTests
 
 # 2. Construir la imagen JVM
-docker build -f src/main/docker/Dockerfile.jvm -t qro-territory-service:1.0.0 .
+docker build -f src/main/docker/Dockerfile.jvm -t qro-territory-service:1.1.0 .
 
 # 3. Taggear con el usuario de Docker Hub
-docker image tag qro-territory-service:1.0.0 josedavila784/qro-territory-service:1.0.0
+docker image tag qro-territory-service:1.1.0 josedavila784/qro-territory-service:1.1.0
 
 # 4. Subir a Docker Hub
 docker login
-docker push josedavila784/qro-territory-service:1.0.0
+docker push josedavila784/qro-territory-service:1.1.0
 ```
 
-Para una nueva versión, reemplaza `1.0.0` por el tag correspondiente (ej. `1.1.0`) en los pasos 2, 3 y 4, y actualiza también `compose.prod.yaml`.
+Para una nueva versión, reemplaza `1.1.0` por el tag correspondiente en los pasos 2, 3 y 4, y actualiza también `compose.prod.yaml`.
 
 ---
 

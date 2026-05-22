@@ -20,7 +20,7 @@ services:
       start_period: 30s
 
   app:
-    image: josedavila784/qro-territory-service:1.0.0
+    image: josedavila784/qro-territory-service:1.1.0
     container_name: qro-app-prod
     depends_on:
       mysql:

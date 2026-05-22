@@ -1,6 +1,6 @@
 # Guía de Despliegue — qro-territory-service
 
-Imagen publicada en Docker Hub: `josedavila784/qro-territory-service:1.0.0`
+Imagen publicada en Docker Hub: `josedavila784/qro-territory-service:1.1.0`
 
 ---
 
@@ -89,7 +89,7 @@ Railway es una plataforma cloud que permite desplegar la imagen directamente des
 
 1. Haz clic en **+ New Service**
 2. Selecciona **Docker Image**
-3. Ingresa la imagen: `josedavila784/qro-territory-service:1.0.0`
+3. Ingresa la imagen: `josedavila784/qro-territory-service:1.1.0`
 4. Railway detectará el servicio y lo agregará al proyecto
 
 ### Paso 4 — Configurar variables de entorno
