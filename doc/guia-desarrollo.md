@@ -1,16 +1,46 @@
 # Guía de Desarrollo — qro-territory-service
 
-## 1. Levantar el entorno
+## Requisitos previos
 
-Desde la raíz del proyecto, levanta MySQL y el contenedor de la aplicación:
+- Docker Desktop instalado y corriendo
+- Git configurado localmente
+- Puerto `8080` y `5005` libres en el host
+
+---
+
+## 1. Clonar y configurar el entorno
+
+```bash
+git clone <url-del-repositorio>
+cd qro-territory-service
+```
+
+El archivo `.env` en la raíz define las credenciales locales. Ya está incluido con valores por defecto:
+
+```
+MYSQL_ROOT_PASSWORD=root
+MYSQL_DATABASE=qro_territory
+MYSQL_USER=qro_user
+MYSQL_PASSWORD=qro_pass
+APP_API_KEY=changeme
+```
+
+> `.env` está en `.gitignore` — nunca se sube al repositorio.
+
+---
+
+## 2. Levantar el entorno
 
 ```bash
 docker compose up -d
 ```
 
 Esto inicia dos contenedores:
-- `qro-mysql` — base de datos MySQL 8.0
-- `qro-app-dev` — entorno Maven/Java 21 con el código montado como volumen
+
+| Contenedor | Descripción |
+|------------|-------------|
+| `qro-mysql` | MySQL 8.0 con la base `qro_territory` |
+| `qro-app-dev` | Maven + Java 21, código montado como volumen |
 
 Verifica que ambos estén corriendo:
 
@@ -18,65 +48,105 @@ Verifica que ambos estén corriendo:
 docker compose ps
 ```
 
-## 2. Ingresar al contenedor de la app
+---
+
+## 3. Ingresar al contenedor de la app
 
 ```bash
 docker compose exec app bash
 ```
 
-Ahora estás dentro del contenedor con acceso al proyecto en `/workspace`.
+A partir de aquí todos los comandos `mvn` se ejecutan **dentro del contenedor**.
 
-## 3. Iniciar el modo de desarrollo
+---
 
-Dentro del contenedor, ejecuta Quarkus en modo dev (live reload activo):
+## 4. Iniciar el modo de desarrollo
 
 ```bash
 mvn quarkus:dev
 ```
 
-La app quedará disponible en:
+Quarkus arranca en modo dev con **live reload**: detecta cambios en el código y recarga sin reiniciar el contenedor.
+
+Al arrancar, Hibernate aplica la estrategia `drop-and-create`:
+1. Elimina las tablas existentes (si las hay)
+2. Las recrea desde las entidades JPA
+3. Ejecuta `import.sql`: carga 7 delegaciones y colonias de ejemplo
+
+Recursos disponibles tras el arranque:
 
 | Recurso | URL |
 |---------|-----|
 | API REST | http://localhost:8080/api/v1 |
 | Dev UI (Quarkus) | http://localhost:8080/q/dev/ |
 | Health checks | http://localhost:8080/q/health |
-| Métricas (Prometheus) | http://localhost:8080/metrics |
-| Debug remoto | puerto `5005` |
+| Métricas Prometheus | http://localhost:8080/metrics |
+| Debug remoto (JDWP) | puerto `5005` |
 
-> El modo dev detecta cambios en el código y recarga automáticamente sin reiniciar el contenedor.
+---
 
-## 4. Comandos útiles dentro del contenedor
+## 5. Flujo de trabajo habitual
 
-### Pruebas
+### Modificar una entidad o servicio
+
+1. Edita el archivo en tu editor (fuera del contenedor — el código está montado como volumen)
+2. Quarkus detecta el cambio y recarga automáticamente
+3. Si modificas una entidad JPA, el contenedor reinicia el contexto de Hibernate
+
+### Agregar una dependencia
+
+1. Edita `pom.xml`
+2. Quarkus en modo dev recargará las dependencias automáticamente en la mayoría de los casos
+3. Si no recarga, reinicia manualmente: `Ctrl+C` → `mvn quarkus:dev`
+
+### Cambiar la configuración
+
+Edita `src/main/resources/application.properties`. El cambio se aplica en el siguiente reinicio del modo dev.
+
+---
+
+## 6. Pruebas
+
+Ejecuta los tests dentro del contenedor:
 
 ```bash
-# Ejecutar todos los tests
+# Todos los tests
 mvn verify -B
 
-# Ejecutar una sola clase de test
-mvn test -Dtest=NombreDeLaClaseTest
+# Una sola clase
+mvn test -Dtest=DelegacionResourceTest
 
-# Ejecutar un método de test específico
-mvn test -Dtest=NombreDeLaClaseTest#nombreDelMetodo
+# Un método específico
+mvn test -Dtest=DelegacionResourceTest#debeListarTodasLasDelegaciones
+
+# Solo tests de integración (sufijo IT)
+mvn verify -Dit.test=ColoniaResourceIT
 ```
 
-### Build
+Los tests usan `@QuarkusTest` + REST-Assured contra la base de datos real del contenedor.
+
+---
+
+## 7. Build
 
 ```bash
-# Compilar el proyecto
+# Compilar (sin empaquetar)
 mvn compile
 
-# Empaquetar como JAR (sin ejecutar tests)
+# Empaquetar como JAR JVM (sin tests)
 mvn package -DskipTests
 
-# Limpiar artefactos generados
+# Limpiar artefactos
 mvn clean
 ```
 
-### Generar imagen de producción
+El JAR generado queda en `target/quarkus-app/quarkus-run.jar`.
 
-Estos comandos se ejecutan **desde el host** (fuera del contenedor), en la raíz del proyecto.
+---
+
+## 8. Generar y publicar la imagen de producción
+
+Estos comandos se ejecutan **desde el host** (fuera del contenedor).
 
 ```bash
 # 1. Empaquetar el JAR dentro del contenedor de desarrollo
@@ -88,17 +158,19 @@ docker build -f src/main/docker/Dockerfile.jvm -t qro-territory-service:1.0.0 .
 # 3. Taggear con el usuario de Docker Hub
 docker image tag qro-territory-service:1.0.0 josedavila784/qro-territory-service:1.0.0
 
-# 4. Subir a Docker Hub (requiere docker login previo)
+# 4. Subir a Docker Hub
 docker login
 docker push josedavila784/qro-territory-service:1.0.0
 ```
 
-> El JAR generado en el paso 1 queda en `target/quarkus-app/`. El `Dockerfile.jvm` lo copia al construir la imagen.
+Para una nueva versión, reemplaza `1.0.0` por el tag correspondiente (ej. `1.1.0`) en los pasos 2, 3 y 4, y actualiza también `compose.prod.yaml`.
 
-## 5. Comandos útiles de Docker Compose (desde el host)
+---
+
+## 9. Comandos Docker Compose (desde el host)
 
 ```bash
-# Ver logs en tiempo real de todos los servicios
+# Ver logs en tiempo real
 docker compose logs -f
 
 # Ver logs solo de la app
@@ -107,29 +179,28 @@ docker compose logs -f app
 # Ver logs solo de MySQL
 docker compose logs -f mysql
 
-# Detener todos los contenedores (conserva datos)
+# Detener contenedores (conserva datos)
 docker compose stop
 
-# Detener y eliminar contenedores (conserva volúmenes)
+# Detener y eliminar contenedores (conserva el volumen de MySQL)
 docker compose down
 
-# Detener y eliminar contenedores + volúmenes (borra la base de datos)
+# Reseteo completo — elimina contenedores y la base de datos
 docker compose down -v
 
-# Reconstruir la imagen de la app (tras cambios en Dockerfile.dev)
-docker compose build app
-docker compose up -d
+# Reconstruir la imagen dev tras cambios en Dockerfile.dev
+docker compose build app && docker compose up -d
 ```
 
-## 6. Acceso directo a MySQL
+---
 
-Desde el host:
+## 10. Acceso directo a MySQL
 
 ```bash
 docker compose exec mysql mysql -u qro_user -pqro_pass qro_territory
 ```
 
-Credenciales del entorno local (definidas en `.env`):
+Credenciales locales (definidas en `.env`):
 
 | Variable | Valor |
 |----------|-------|
@@ -137,3 +208,71 @@ Credenciales del entorno local (definidas en `.env`):
 | Usuario | `qro_user` |
 | Contraseña | `qro_pass` |
 | Puerto | `3306` |
+
+---
+
+## 11. Probar la API manualmente
+
+```bash
+# Listar delegaciones
+curl http://localhost:8080/api/v1/delegaciones
+
+# Obtener delegación por ID
+curl http://localhost:8080/api/v1/delegaciones/1
+
+# Colonias por delegación
+curl "http://localhost:8080/api/v1/colonias?delegacion=CENTRO_HISTORICO"
+
+# Crear colonia (requiere API Key)
+curl -X POST http://localhost:8080/api/v1/admin/colonias \
+  -H "Content-Type: application/json" \
+  -H "X-API-KEY: changeme" \
+  -d '{
+    "nombre": "Colonia de Prueba",
+    "codigo_postal": "76000",
+    "tipo_asentamiento": "COLONIA",
+    "delegacion_id": 2
+  }'
+```
+
+---
+
+## 12. Solución de problemas comunes
+
+### La app no arranca — error de conexión a MySQL
+
+```
+Unable to acquire JDBC Connection
+```
+
+MySQL aún no está listo. Espera unos segundos y reinicia:
+
+```bash
+docker compose restart app
+```
+
+O verifica el healthcheck de MySQL:
+
+```bash
+docker compose ps mysql
+```
+
+### Puerto 8080 ocupado
+
+Detén el proceso que lo usa o cambia el puerto en `application.properties`:
+
+```properties
+quarkus.http.port=8081
+```
+
+### Cambios de entidad no se reflejan
+
+Fuerza un reinicio del modo dev: `Ctrl+C` → `mvn quarkus:dev`. Si el problema persiste, resetea la base de datos:
+
+```bash
+docker compose down -v && docker compose up -d
+```
+
+### `APP_API_KEY` no definida — error al arrancar
+
+Asegúrate de que `.env` contiene `APP_API_KEY=changeme` (o el valor que prefieras para desarrollo).

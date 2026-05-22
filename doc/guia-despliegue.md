@@ -4,16 +4,24 @@ Imagen publicada en Docker Hub: `josedavila784/qro-territory-service:1.0.0`
 
 ---
 
-## Requisitos
+## Opción A — Despliegue local con Docker Compose
+
+### Requisitos
 
 - Docker Desktop instalado y corriendo
-- Acceso a internet (para descargar las imágenes la primera vez)
+- Acceso a internet para descargar las imágenes la primera vez
 
----
+### Variables de entorno requeridas
 
-## Levantar el servicio
+Antes de levantar el servicio, define `APP_API_KEY` en tu shell o en un archivo `.env` junto al `compose.prod.yaml`:
 
-Desde cualquier carpeta que tenga el archivo `compose.prod.yaml`:
+```bash
+export APP_API_KEY=tu-clave-secreta-aqui
+```
+
+> Si `APP_API_KEY` no está definida, Docker Compose abortará con un error explícito antes de levantar cualquier contenedor.
+
+### Levantar el servicio
 
 ```bash
 docker compose -f compose.prod.yaml up -d
@@ -23,38 +31,127 @@ La primera vez descarga las imágenes automáticamente. El flag `-d` corre los c
 
 ### ¿Qué ocurre al arrancar?
 
-1. Se levanta MySQL y espera a estar listo (healthcheck)
-2. Arranca la aplicación
-3. Hibernate elimina las tablas existentes y las recrea desde las entidades JPA
-4. Se ejecuta `import.sql`: carga 7 delegaciones y sus colonias
-5. La API queda disponible en `http://localhost:8080`
+1. Se levanta MySQL 8.0 y espera a estar saludable (healthcheck cada 10s)
+2. Arranca la aplicación Quarkus con perfil `prod`
+3. Hibernate aplica la estrategia `update`: crea las tablas si no existen, aplica cambios incrementales si las hay — **nunca borra datos**
+4. La API queda disponible en `http://localhost:8080`
 
-> Esto ocurre **en cada arranque** porque la estrategia es `drop-and-create`. Los datos siempre parten del estado inicial definido en `import.sql`. Cualquier colonia creada vía API se pierde al reiniciar.
+> En el **primer despliegue** (base de datos vacía), `update` crea el esquema completo automáticamente. No se carga `import.sql` en producción — los datos los gestiona la aplicación vía API.
 
----
-
-## Verificar que está corriendo
+### Verificar que está corriendo
 
 ```bash
-# Ver estado de los contenedores
+# Estado de los contenedores
 docker compose -f compose.prod.yaml ps
+
+# Health check
+curl http://localhost:8080/q/health
 
 # Probar la API
 curl http://localhost:8080/api/v1/delegaciones
 ```
 
+### Detener el servicio
+
+```bash
+# Detener sin borrar datos (el volumen MySQL se conserva)
+docker compose -f compose.prod.yaml down
+
+# Detener y borrar todos los datos (reseteo completo)
+docker compose -f compose.prod.yaml down -v
+```
+
+---
+
+## Opción B — Despliegue en Railway
+
+Railway es una plataforma cloud que permite desplegar la imagen directamente desde Docker Hub con base de datos MySQL incluida.
+
+### Paso 1 — Crear proyecto en Railway
+
+1. Ingresa a [railway.app](https://railway.app) y crea una cuenta o inicia sesión
+2. Haz clic en **New Project**
+3. Selecciona **Empty Project**
+
+### Paso 2 — Agregar base de datos MySQL
+
+1. Dentro del proyecto, haz clic en **+ New Service**
+2. Selecciona **Database → MySQL**
+3. Railway provisiona MySQL automáticamente
+4. Haz clic en el servicio MySQL y abre la pestaña **Variables** — anota estos valores:
+   - `MYSQLHOST`
+   - `MYSQLPORT`
+   - `MYSQLUSER`
+   - `MYSQLPASSWORD`
+   - `MYSQLDATABASE`
+
+### Paso 3 — Agregar el servicio de la app
+
+1. Haz clic en **+ New Service**
+2. Selecciona **Docker Image**
+3. Ingresa la imagen: `josedavila784/qro-territory-service:1.0.0`
+4. Railway detectará el servicio y lo agregará al proyecto
+
+### Paso 4 — Configurar variables de entorno
+
+En el servicio de la app, abre la pestaña **Variables** y agrega:
+
+| Variable | Valor |
+|----------|-------|
+| `QUARKUS_DATASOURCE_JDBC_URL` | `jdbc:mysql://${{MySQL.MYSQLHOST}}:${{MySQL.MYSQLPORT}}/${{MySQL.MYSQLDATABASE}}` |
+| `QUARKUS_DATASOURCE_USERNAME` | `${{MySQL.MYSQLUSER}}` |
+| `QUARKUS_DATASOURCE_PASSWORD` | `${{MySQL.MYSQLPASSWORD}}` |
+| `QUARKUS_HTTP_PORT` | `${{PORT}}` |
+| `APP_API_KEY` | tu clave secreta (ej. genera una con `openssl rand -hex 32`) |
+
+> La sintaxis `${{MySQL.VARIABLE}}` hace referencia a las variables del servicio MySQL dentro del mismo proyecto Railway.
+
+> `${{PORT}}` es el puerto dinámico que Railway asigna a cada servicio — Quarkus lo lee via `QUARKUS_HTTP_PORT`.
+
+### Paso 5 — Desplegar
+
+1. En el servicio de la app, haz clic en **Deploy**
+2. Railway descarga la imagen de Docker Hub y levanta el contenedor
+3. En la pestaña **Deployments** puedes ver los logs en tiempo real
+
+### Paso 6 — Obtener la URL pública
+
+1. En el servicio de la app, abre la pestaña **Settings**
+2. En la sección **Networking**, haz clic en **Generate Domain**
+3. Railway asigna una URL pública con HTTPS, por ejemplo:
+   ```
+   https://qro-territory-service-production.up.railway.app
+   ```
+
+### Paso 7 — Verificar el despliegue
+
+```bash
+# Health check
+curl https://<tu-dominio>.up.railway.app/q/health
+
+# Listar delegaciones
+curl https://<tu-dominio>.up.railway.app/api/v1/delegaciones
+```
+
+### Actualizar a una nueva versión
+
+1. Publica la nueva imagen en Docker Hub (ver `guia-desarrollo.md` sección 8)
+2. En Railway, abre el servicio de la app
+3. En **Settings → Source**, actualiza el tag de la imagen (ej. `1.1.0`)
+4. Haz clic en **Deploy** — Railway hace el reemplazo sin tiempo de inactividad
+
 ---
 
 ## Endpoints disponibles
 
-| Método | URL | Descripción |
-|--------|-----|-------------|
-| GET | `/api/v1/delegaciones` | Lista las 7 delegaciones |
-| GET | `/api/v1/delegaciones/{id}` | Detalle de una delegación |
-| GET | `/api/v1/colonias?delegacion=NOMBRE` | Colonias por delegación |
-| GET | `/api/v1/colonias/{id}` | Detalle de una colonia |
-| POST | `/api/v1/admin/colonias` | Crear colonia (requiere API Key) |
-| PUT | `/api/v1/admin/colonias/{id}` | Actualizar colonia (requiere API Key) |
+| Método | URL | Auth |
+|--------|-----|------|
+| GET | `/api/v1/delegaciones` | — |
+| GET | `/api/v1/delegaciones/{id}` | — |
+| GET | `/api/v1/colonias?delegacion=NOMBRE` | — |
+| GET | `/api/v1/colonias/{id}` | — |
+| POST | `/api/v1/admin/colonias` | X-API-KEY |
+| PUT | `/api/v1/admin/colonias/{id}` | X-API-KEY |
 
 Valores válidos para el parámetro `delegacion`:
 
@@ -64,14 +161,12 @@ JOSEFA_VERGARA, FELIX_OSORES_SOTOMAYOR, FELIPE_CARRILLO_PUERTO,
 EPIGMENIO_GONZALEZ
 ```
 
-### Endpoints admin
-
-Requieren el header `X-API-KEY: changeme`:
+### Ejemplo — endpoint admin
 
 ```bash
-curl -X POST http://localhost:8080/api/v1/admin/colonias \
+curl -X POST https://<tu-dominio>/api/v1/admin/colonias \
   -H "Content-Type: application/json" \
-  -H "X-API-KEY: changeme" \
+  -H "X-API-KEY: <tu-clave>" \
   -d '{
     "nombre": "Nueva Colonia",
     "codigo_postal": "76000",
@@ -82,36 +177,22 @@ curl -X POST http://localhost:8080/api/v1/admin/colonias \
 
 ---
 
-## Detener el servicio
-
-```bash
-# Detener sin borrar datos
-docker compose -f compose.prod.yaml down
-
-# Detener y borrar todos los datos (reseteo completo)
-docker compose -f compose.prod.yaml down -v
-```
-
-El flag `-v` elimina el volumen de MySQL. La próxima vez que levantes el servicio volverá a sembrar los datos desde cero.
-
----
-
 ## Observabilidad
 
 | URL | Descripción |
 |-----|-------------|
-| `http://localhost:8080/q/health` | Health check (liveness + readiness) |
-| `http://localhost:8080/metrics` | Métricas Prometheus |
+| `/q/health` | Health check (liveness + readiness) |
+| `/q/health/live` | Solo liveness |
+| `/q/health/ready` | Solo readiness |
+| `/metrics` | Métricas en formato Prometheus |
 
 ---
 
-## Estrategia de datos
+## Estrategia de datos por perfil
 
-Se usa `schema-management.strategy=drop-and-create`:
+| Perfil | Estrategia | Comportamiento |
+|--------|-----------|----------------|
+| `dev` (local) | `drop-and-create` | Borra y recrea el esquema en cada arranque; carga `import.sql` |
+| `prod` | `update` | Crea el esquema en el primer arranque; aplica cambios incrementales; **nunca borra datos** |
 
-- Las tablas se **eliminan y recrean en cada arranque** del contenedor de la app
-- `import.sql` corre **siempre** al iniciar — el catálogo queda en su estado original
-- Colonias creadas vía API **no persisten** entre reinicios
-- El volumen `mysql_prod_data` guarda los archivos de MySQL, pero los datos de las tablas se reinician con la app
-
-Para un reseteo completo (incluyendo el volumen de MySQL) usa `docker compose -f compose.prod.yaml down -v`.
+Los datos creados vía API en producción persisten entre reinicios gracias al volumen de MySQL (`mysql_data` en Docker Compose, volumen gestionado por Railway en la nube).
