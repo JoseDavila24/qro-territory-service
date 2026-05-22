@@ -29,7 +29,7 @@ services:
       QUARKUS_DATASOURCE_USERNAME: qro_user
       QUARKUS_DATASOURCE_PASSWORD: qro_pass
       QUARKUS_DATASOURCE_JDBC_URL: jdbc:mysql://mysql:3306/qro_territory
-      APP_API_KEY: ${APP_API_KEY:-changeme}
+      APP_API_KEY: ${APP_API_KEY:?APP_API_KEY debe estar definida en el entorno}
     ports:
       - "8080:8080"
 
