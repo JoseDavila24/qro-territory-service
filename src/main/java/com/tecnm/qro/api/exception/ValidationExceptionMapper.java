@@ -1,6 +1,7 @@
 package com.tecnm.qro.api.exception;
 
 import com.tecnm.qro.api.model.Error;
+import io.quarkus.logging.Log;
 import jakarta.validation.ConstraintViolationException;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
@@ -22,6 +23,7 @@ public class ValidationExceptionMapper implements ExceptionMapper<ConstraintViol
                 })
                 .collect(Collectors.joining(", "));
 
+        Log.warnf("400 Validation: %s", message);
         return Response.status(Response.Status.BAD_REQUEST)
                 .type(MediaType.APPLICATION_JSON)
                 .entity(new Error()

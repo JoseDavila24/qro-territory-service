@@ -964,6 +964,6 @@ INSERT INTO colonia (id, nombre, codigo_postal, tipo_asentamiento, delegacion_id
 -- Sincronizar secuencias de Hibernate con el máximo ID sembrado
 -- (colonia_SEQ y delegacion_SEQ no se recrean con drop-and-create, hay que resetearlas manualmente)
 DELETE FROM delegacion_SEQ;
-INSERT INTO delegacion_SEQ (next_val) VALUES (101);
+INSERT INTO delegacion_SEQ (next_val) VALUES (50);
 DELETE FROM colonia_SEQ;
-INSERT INTO colonia_SEQ    (next_val) VALUES (1001);
+INSERT INTO colonia_SEQ    (next_val) VALUES (1000);

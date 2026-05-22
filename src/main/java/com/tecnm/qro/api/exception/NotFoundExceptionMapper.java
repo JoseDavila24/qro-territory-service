@@ -1,6 +1,7 @@
 package com.tecnm.qro.api.exception;
 
 import com.tecnm.qro.api.model.Error;
+import io.quarkus.logging.Log;
 import jakarta.ws.rs.NotFoundException;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
@@ -13,6 +14,7 @@ public class NotFoundExceptionMapper implements ExceptionMapper<NotFoundExceptio
 
     @Override
     public Response toResponse(NotFoundException e) {
+        Log.warnf("404 Not Found: %s", e.getMessage());
         return Response.status(Response.Status.NOT_FOUND)
                 .type(MediaType.APPLICATION_JSON)
                 .entity(new Error()

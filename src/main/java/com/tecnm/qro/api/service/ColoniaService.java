@@ -7,6 +7,7 @@ import com.tecnm.qro.api.model.Colonia;
 import com.tecnm.qro.api.model.ColoniaInput;
 import com.tecnm.qro.api.model.Error;
 import com.tecnm.qro.api.model.NombreDelegacion;
+import io.quarkus.logging.Log;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
@@ -29,10 +30,12 @@ public class ColoniaService {
         if (delegacion == null) {
             throw new NotFoundException("La delegación '" + clave + "' no existe");
         }
-        return ColoniaEntity.findByDelegacion(delegacion)
+        List<Colonia> result = ColoniaEntity.findByDelegacion(delegacion)
                 .stream()
                 .map(mapper::toDto)
                 .toList();
+        Log.infof("GET colonias delegacion=%s: %d resultados", clave, result.size());
+        return result;
     }
 
     @Transactional
@@ -41,6 +44,7 @@ public class ColoniaService {
         if (entity == null) {
             throw new NotFoundException("La colonia con ID " + id + " no existe");
         }
+        Log.infof("GET colonia id=%d", id);
         return mapper.toDto(entity);
     }
 
@@ -52,6 +56,7 @@ public class ColoniaService {
         }
         ColoniaEntity entity = mapper.toNewEntity(input, delegacion);
         entity.persist();
+        Log.infof("Colonia creada: id=%d, nombre='%s', delegacion_id=%d", entity.id, entity.nombre, entity.delegacion.id);
         return mapper.toDto(entity);
     }
 
@@ -66,10 +71,12 @@ public class ColoniaService {
             throw unprocessable("La delegación con ID " + input.getDelegacionId() + " no existe");
         }
         mapper.updateEntity(entity, input, delegacion);
+        Log.infof("Colonia actualizada: id=%d, nombre='%s', delegacion_id=%d", entity.id, entity.nombre, entity.delegacion.id);
         return mapper.toDto(entity);
     }
 
     private WebApplicationException unprocessable(String message) {
+        Log.warnf("422 Unprocessable Entity: %s", message);
         return new WebApplicationException(
                 Response.status(422)
                         .type(MediaType.APPLICATION_JSON)

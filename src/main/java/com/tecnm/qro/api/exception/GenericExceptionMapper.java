@@ -1,7 +1,7 @@
 package com.tecnm.qro.api.exception;
 
 import com.tecnm.qro.api.model.Error;
-import jakarta.ws.rs.WebApplicationException;
+import io.quarkus.logging.Log;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 import jakarta.ws.rs.ext.ExceptionMapper;
@@ -13,10 +13,8 @@ public class GenericExceptionMapper implements ExceptionMapper<Exception> {
 
     @Override
     public Response toResponse(Exception e) {
-        // WebApplicationException ya lleva una Response construida (ej. 422)
-        if (e instanceof WebApplicationException wae) {
-            return wae.getResponse();
-        }
+        Throwable cause = e.getCause() != null ? e.getCause() : e;
+        Log.errorf(e, "500 error inesperado: %s", cause.getMessage());
         return Response.status(Response.Status.INTERNAL_SERVER_ERROR)
                 .type(MediaType.APPLICATION_JSON)
                 .entity(new Error()

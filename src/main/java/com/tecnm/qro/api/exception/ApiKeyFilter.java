@@ -7,6 +7,7 @@ import jakarta.ws.rs.container.ContainerRequestFilter;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 import jakarta.ws.rs.ext.Provider;
+import io.quarkus.logging.Log;
 import java.time.OffsetDateTime;
 import org.eclipse.microprofile.config.inject.ConfigProperty;
 
@@ -24,6 +25,7 @@ public class ApiKeyFilter implements ContainerRequestFilter {
         }
         String key = ctx.getHeaderString("X-API-KEY");
         if (key == null || !key.equals(apiKey)) {
+            Log.warnf("401 Unauthorized: X-API-KEY inválida en %s", ctx.getUriInfo().getPath());
             ctx.abortWith(Response.status(Response.Status.UNAUTHORIZED)
                     .type(MediaType.APPLICATION_JSON)
                     .entity(new Error()
