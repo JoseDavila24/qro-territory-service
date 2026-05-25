@@ -275,4 +275,8 @@ docker compose down -v && docker compose up -d
 
 ### `APP_API_KEY` no definida — error al arrancar
 
-Asegúrate de que `.env` contiene `APP_API_KEY=changeme` (o el valor que prefieras para desarrollo).
+El `compose.yaml` inyecta `APP_API_KEY` al contenedor usando el valor del `.env` (default `changeme`). Si ves este error, verifica que el contenedor fue recreado tras el último cambio al `.env`:
+
+```bash
+docker compose down && docker compose up -d
+```
