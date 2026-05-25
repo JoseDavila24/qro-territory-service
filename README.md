@@ -1,88 +1,109 @@
 # qro-territory-service
 
-This project uses Quarkus, the Supersonic Subatomic Java Framework.
+API REST para consultar el catálogo de delegaciones municipales de Querétaro y sus colonias. Diseñada para autocompletar formularios de captura de direcciones: dada una delegación, devuelve su lista de colonias.
 
-If you want to learn more about Quarkus, please visit its website: <https://quarkus.io/>.
+Imagen Docker Hub: `josedavila784/qro-territory-service:1.1.0`
 
-## Running the application in dev mode
+---
 
-You can run your application in dev mode that enables live coding using:
+## Requisitos
 
-```shell script
-./mvnw quarkus:dev
+- Docker Desktop instalado y corriendo
+- Acceso a internet (para descargar las imágenes la primera vez)
+
+---
+
+## Configuración inicial
+
+Antes de levantar el servicio define `APP_API_KEY` — es requerida para los endpoints de administración. Si no está definida, Docker Compose abortará al iniciar.
+
+Crea un archivo `.env` en la raíz del proyecto con el siguiente contenido:
+
+```
+APP_API_KEY=tu-clave-secreta-aqui
 ```
 
-> **_NOTE:_**  Quarkus now ships with a Dev UI, which is available in dev mode only at <http://localhost:8080/q/dev/>.
+Docker Compose lo carga automáticamente.
 
-## Packaging and running the application
+---
 
-The application can be packaged using:
+## Levantar el servicio
 
-```shell script
-./mvnw package
+```bash
+docker compose -f compose.prod.yaml up -d
 ```
 
-It produces the `quarkus-run.jar` file in the `target/quarkus-app/` directory.
-Be aware that it’s not an _über-jar_ as the dependencies are copied into the `target/quarkus-app/lib/` directory.
+Al arrancar, Hibernate crea el esquema y carga automáticamente el catálogo completo (7 delegaciones y sus colonias) desde el script embebido en la imagen.
 
-The application is now runnable using `java -jar target/quarkus-app/quarkus-run.jar`.
+### Verificar que está corriendo
 
-If you want to build an _über-jar_, execute the following command:
-
-```shell script
-./mvnw package -Dquarkus.package.jar.type=uber-jar
+```bash
+docker compose -f compose.prod.yaml ps
+curl http://localhost:8080/api/v1/delegaciones
 ```
 
-The application, packaged as an _über-jar_, is now runnable using `java -jar target/*-runner.jar`.
+### Detener
 
-## Creating a native executable
+```bash
+# Detener sin borrar datos
+docker compose -f compose.prod.yaml down
 
-You can create a native executable using:
-
-```shell script
-./mvnw package -Dnative
+# Reseteo completo (borra el volumen MySQL)
+docker compose -f compose.prod.yaml down -v
 ```
 
-Or, if you don't have GraalVM installed, you can run the native executable build in a container using:
+---
 
-```shell script
-./mvnw package -Dnative -Dquarkus.native.container-build=true
+## Endpoints
+
+| Método | URL | Auth | Descripción |
+|--------|-----|------|-------------|
+| GET | `/api/v1/delegaciones` | — | Lista las 7 delegaciones |
+| GET | `/api/v1/delegaciones/{delegacionId}` | — | Detalle de una delegación |
+| GET | `/api/v1/colonias?delegacion=NOMBRE` | — | Colonias por delegación |
+| GET | `/api/v1/colonias/{coloniaId}` | — | Detalle de una colonia |
+| POST | `/api/v1/admin/colonias` | X-API-KEY | Crear colonia |
+| PUT | `/api/v1/admin/colonias/{id}` | X-API-KEY | Actualizar colonia |
+
+### Valores válidos para `delegacion`
+
+```
+CENTRO_HISTORICO, SANTA_ROSA_JAUREGUI, VILLA_CAYETANO_RUBIO,
+JOSEFA_VERGARA, FELIX_OSORES_SOTOMAYOR, FELIPE_CARRILLO_PUERTO,
+EPIGMENIO_GONZALEZ
 ```
 
-You can then execute your native executable with: `./target/qro-territory-service-1.0.0-SNAPSHOT-runner`
+### Ejemplo — consultar colonias
 
-If you want to learn more about building native executables, please consult <https://quarkus.io/guides/maven-tooling>.
+```bash
+curl "http://localhost:8080/api/v1/colonias?delegacion=CENTRO_HISTORICO"
+```
 
-## Related Guides
+### Ejemplo — crear colonia (admin)
 
-- REST ([guide](https://quarkus.io/guides/rest)): Build RESTful web services and APIs using Jakarta REST (formerly JAX-RS)
-- Hibernate ORM ([guide](https://quarkus.io/guides/hibernate-orm)): Object-relational mapping with JPA/Hibernate for relational database access
-- Hibernate Validator ([guide](https://quarkus.io/guides/validation)): Bean validation using Hibernate Validator and Jakarta Validation annotations
-- Hibernate ORM with Panache ([guide](https://quarkus.io/guides/hibernate-orm-panache)): Simplified JPA/Hibernate data access layer with active record and repository patterns
-- SmallRye Health ([guide](https://quarkus.io/guides/smallrye-health)): Monitor service health
-- JDBC Driver - MySQL ([guide](https://quarkus.io/guides/datasource)): Connect to the MySQL database via JDBC
-- Micrometer metrics ([guide](https://quarkus.io/guides/micrometer)): Instrument the runtime and your application with dimensional metrics using Micrometer.
+```bash
+curl -X POST http://localhost:8080/api/v1/admin/colonias \
+  -H "Content-Type: application/json" \
+  -H "X-API-KEY: tu-clave-secreta-aqui" \
+  -d '{
+    "nombre": "Nueva Colonia",
+    "codigo_postal": "76000",
+    "tipo_asentamiento": "COLONIA",
+    "delegacion_id": 1
+  }'
+```
 
-## Provided Code
+---
 
-### Hibernate ORM
+## Observabilidad
 
-Create your first JPA entity
+| URL | Descripción |
+|-----|-------------|
+| `http://localhost:8080/q/health` | Health check |
+| `http://localhost:8080/metrics` | Métricas Prometheus |
 
-[Related guide section...](https://quarkus.io/guides/hibernate-orm)
+---
 
+## Contrato OpenAPI
 
-[Related Hibernate with Panache section...](https://quarkus.io/guides/hibernate-orm-panache)
-
-
-### REST
-
-Easily start your REST Web Services
-
-[Related guide section...](https://quarkus.io/guides/getting-started-reactive#reactive-jax-rs-resources)
-
-### SmallRye Health
-
-Monitor your application's health using SmallRye Health
-
-[Related guide section...](https://quarkus.io/guides/smallrye-health)
+El archivo `openapi.yaml` contiene la especificación completa del API (OAS 3.0).
