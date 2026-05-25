@@ -13,13 +13,33 @@ Imagen publicada en Docker Hub: `josedavila784/qro-territory-service:1.1.0`
 
 ### Variables de entorno requeridas
 
-Antes de levantar el servicio, define `APP_API_KEY` en tu shell o en un archivo `.env` junto al `compose.prod.yaml`:
+`compose.prod.yaml` requiere que `APP_API_KEY` esté definida antes de levantar el servicio. Si no está definida, Docker Compose aborta con un error antes de iniciar cualquier contenedor.
 
-```bash
-export APP_API_KEY=tu-clave-secreta-aqui
+**Opción recomendada — archivo `.env`**
+
+Crea un archivo llamado `.env` en el mismo directorio donde está `compose.prod.yaml` (la raíz del proyecto) con este contenido:
+
+```
+APP_API_KEY=tu-clave-secreta-aqui
 ```
 
-> Si `APP_API_KEY` no está definida, Docker Compose abortará con un error explícito antes de levantar cualquier contenedor.
+Docker Compose carga este archivo automáticamente. No necesitas hacer nada más.
+
+**Alternativa — variable de entorno en el shell**
+
+En PowerShell (Windows):
+```powershell
+$env:APP_API_KEY = "tu-clave-secreta-aqui"
+docker compose -f compose.prod.yaml up -d
+```
+
+En Bash (Linux/macOS):
+```bash
+export APP_API_KEY=tu-clave-secreta-aqui
+docker compose -f compose.prod.yaml up -d
+```
+
+> La variable definida en el shell solo dura mientras la sesión esté abierta. El archivo `.env` es persistente.
 
 ### Levantar el servicio
 
@@ -77,13 +97,9 @@ Railway es una plataforma cloud que permite desplegar la imagen directamente des
 
 1. Dentro del proyecto, haz clic en **+ New Service**
 2. Selecciona **Database → MySQL**
-3. Railway provisiona MySQL automáticamente
-4. Haz clic en el servicio MySQL y abre la pestaña **Variables** — anota estos valores:
-   - `MYSQLHOST`
-   - `MYSQLPORT`
-   - `MYSQLUSER`
-   - `MYSQLPASSWORD`
-   - `MYSQLDATABASE`
+3. Railway provisiona MySQL automáticamente y expone sus variables de conexión
+
+> No necesitas copiar las variables de MySQL — en el Paso 4 las referenciarás directamente con la sintaxis `${{MySQL.VARIABLE}}`, que Railway resuelve de forma automática.
 
 ### Paso 3 — Agregar el servicio de la app
 
@@ -104,7 +120,7 @@ En el servicio de la app, abre la pestaña **Variables** y agrega:
 | `QUARKUS_HTTP_PORT` | `${{PORT}}` |
 | `APP_API_KEY` | tu clave secreta (ej. genera una con `openssl rand -hex 32`) |
 
-> La sintaxis `${{MySQL.VARIABLE}}` hace referencia a las variables del servicio MySQL dentro del mismo proyecto Railway.
+> **Nombre del servicio MySQL**: la sintaxis `${{MySQL.VARIABLE}}` asume que Railway nombró el servicio de base de datos exactamente `MySQL`. Verifica el nombre en la esquina superior izquierda del servicio dentro del proyecto — si es diferente (ej. `mysql`), ajusta el prefijo en todas las referencias.
 
 > `${{PORT}}` es el puerto dinámico que Railway asigna a cada servicio — Quarkus lo lee via `QUARKUS_HTTP_PORT`.
 
