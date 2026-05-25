@@ -77,11 +77,14 @@ Recursos disponibles tras el arranque:
 
 | Recurso | URL |
 |---------|-----|
-| API REST | http://localhost:8080/api/v1 |
+| API REST — delegaciones | http://localhost:8080/api/v1/delegaciones |
+| API REST — colonias | http://localhost:8080/api/v1/colonias |
 | Dev UI (Quarkus) | http://localhost:8080/q/dev/ |
 | Health checks | http://localhost:8080/q/health |
 | Métricas Prometheus | http://localhost:8080/metrics |
 | Debug remoto (JDWP) | puerto `5005` |
+
+> `/api/v1` es el prefijo base de la API, no una ruta válida por sí misma. Llamarla directamente devuelve `404`.
 
 ---
 
