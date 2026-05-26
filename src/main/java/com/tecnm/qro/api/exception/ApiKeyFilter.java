@@ -20,7 +20,7 @@ public class ApiKeyFilter implements ContainerRequestFilter {
 
     @Override
     public void filter(ContainerRequestContext ctx) {
-        if (!ctx.getUriInfo().getPath().contains("admin")) {
+        if (!ctx.getUriInfo().getPath().startsWith("/api/v1/admin")) {
             return;
         }
         String key = ctx.getHeaderString("X-API-KEY");

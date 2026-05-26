@@ -2,20 +2,16 @@ package com.tecnm.qro.api.service;
 
 import com.tecnm.qro.api.entity.ColoniaEntity;
 import com.tecnm.qro.api.entity.DelegacionEntity;
+import com.tecnm.qro.api.exception.UnprocessableEntityException;
 import com.tecnm.qro.api.mapper.ColoniaMapper;
 import com.tecnm.qro.api.model.Colonia;
 import com.tecnm.qro.api.model.ColoniaInput;
-import com.tecnm.qro.api.model.Error;
 import com.tecnm.qro.api.model.NombreDelegacion;
 import io.quarkus.logging.Log;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
 import jakarta.ws.rs.NotFoundException;
-import jakarta.ws.rs.WebApplicationException;
-import jakarta.ws.rs.core.MediaType;
-import jakarta.ws.rs.core.Response;
-import java.time.OffsetDateTime;
 import java.util.List;
 
 @ApplicationScoped
@@ -24,7 +20,7 @@ public class ColoniaService {
     @Inject
     ColoniaMapper mapper;
 
-    @Transactional
+    @Transactional(Transactional.TxType.SUPPORTS)
     public List<Colonia> findByDelegacion(NombreDelegacion clave) {
         DelegacionEntity delegacion = DelegacionEntity.findByClave(clave);
         if (delegacion == null) {
@@ -38,7 +34,7 @@ public class ColoniaService {
         return result;
     }
 
-    @Transactional
+    @Transactional(Transactional.TxType.SUPPORTS)
     public Colonia findById(Long id) {
         ColoniaEntity entity = ColoniaEntity.findById(id);
         if (entity == null) {
@@ -52,7 +48,7 @@ public class ColoniaService {
     public Colonia create(ColoniaInput input) {
         DelegacionEntity delegacion = DelegacionEntity.findById(input.getDelegacionId().longValue());
         if (delegacion == null) {
-            throw unprocessable("La delegación con ID " + input.getDelegacionId() + " no existe");
+            throw new UnprocessableEntityException("La delegación con ID " + input.getDelegacionId() + " no existe");
         }
         ColoniaEntity entity = mapper.toNewEntity(input, delegacion);
         entity.persist();
@@ -68,24 +64,11 @@ public class ColoniaService {
         }
         DelegacionEntity delegacion = DelegacionEntity.findById(input.getDelegacionId().longValue());
         if (delegacion == null) {
-            throw unprocessable("La delegación con ID " + input.getDelegacionId() + " no existe");
+            throw new UnprocessableEntityException("La delegación con ID " + input.getDelegacionId() + " no existe");
         }
         mapper.updateEntity(entity, input, delegacion);
         Log.infof("Colonia actualizada: id=%d, nombre='%s', delegacion_id=%d", entity.id, entity.nombre, entity.delegacion.id);
         return mapper.toDto(entity);
     }
 
-    private WebApplicationException unprocessable(String message) {
-        Log.warnf("422 Unprocessable Entity: %s", message);
-        return new WebApplicationException(
-                Response.status(422)
-                        .type(MediaType.APPLICATION_JSON)
-                        .entity(new Error()
-                                .status(422)
-                                .error("Unprocessable Entity")
-                                .message(message)
-                                .timestamp(OffsetDateTime.now()))
-                        .build()
-        );
-    }
 }

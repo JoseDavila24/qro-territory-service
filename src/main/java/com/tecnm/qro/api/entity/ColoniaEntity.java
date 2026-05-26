@@ -10,6 +10,7 @@ import jakarta.persistence.FetchType;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
+import java.util.List;
 
 @Entity
 @Table(name = "colonia")
@@ -29,7 +30,7 @@ public class ColoniaEntity extends PanacheEntity {
     @JoinColumn(name = "delegacion_id", nullable = false)
     public DelegacionEntity delegacion;
 
-    public static java.util.List<ColoniaEntity> findByDelegacion(DelegacionEntity delegacion) {
+    public static List<ColoniaEntity> findByDelegacion(DelegacionEntity delegacion) {
         return list("delegacion", delegacion);
     }
 }

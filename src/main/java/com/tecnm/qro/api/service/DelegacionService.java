@@ -16,7 +16,7 @@ public class DelegacionService {
     @Inject
     DelegacionMapper mapper;
 
-    @Transactional
+    @Transactional(Transactional.TxType.SUPPORTS)
     public List<Delegacion> listAll() {
         List<Delegacion> result = DelegacionEntity.<DelegacionEntity>listAll()
                 .stream()
@@ -26,7 +26,7 @@ public class DelegacionService {
         return result;
     }
 
-    @Transactional
+    @Transactional(Transactional.TxType.SUPPORTS)
     public Delegacion findById(Long id) {
         DelegacionEntity entity = DelegacionEntity.findById(id);
         if (entity == null) {
