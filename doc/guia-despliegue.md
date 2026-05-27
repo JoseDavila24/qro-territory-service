@@ -1,6 +1,6 @@
 # Guía de Despliegue — qro-territory-service
 
-Imagen publicada en Docker Hub: `josedavila784/qro-territory-service:1.1.0`
+Imagen publicada en Docker Hub: `josedavila784/qro-territory-service:1.1.1`
 
 ---
 
@@ -105,7 +105,7 @@ Railway es una plataforma cloud que permite desplegar la imagen directamente des
 
 1. Haz clic en **+ New Service**
 2. Selecciona **Docker Image**
-3. Ingresa la imagen: `josedavila784/qro-territory-service:1.1.0`
+3. Ingresa la imagen: `josedavila784/qro-territory-service:1.1.1`
 4. Railway detectará el servicio y lo agregará al proyecto
 
 ### Paso 4 — Configurar variables de entorno
@@ -117,12 +117,11 @@ En el servicio de la app, abre la pestaña **Variables** y agrega:
 | `QUARKUS_DATASOURCE_JDBC_URL` | `jdbc:mysql://${{MySQL.MYSQLHOST}}:${{MySQL.MYSQLPORT}}/${{MySQL.MYSQLDATABASE}}` |
 | `QUARKUS_DATASOURCE_USERNAME` | `${{MySQL.MYSQLUSER}}` |
 | `QUARKUS_DATASOURCE_PASSWORD` | `${{MySQL.MYSQLPASSWORD}}` |
-| `QUARKUS_HTTP_PORT` | `${{PORT}}` |
 | `APP_API_KEY` | tu clave secreta (ej. genera una con `openssl rand -hex 32`) |
 
-> **Nombre del servicio MySQL**: la sintaxis `${{MySQL.VARIABLE}}` asume que Railway nombró el servicio de base de datos exactamente `MySQL`. Verifica el nombre en la esquina superior izquierda del servicio dentro del proyecto — si es diferente (ej. `mysql`), ajusta el prefijo en todas las referencias.
+> **No agregues `QUARKUS_HTTP_PORT`**: Railway inyecta `PORT` automáticamente en cada contenedor. La app lee esa variable directo (`${PORT:8080}` en el perfil prod). Configurar `QUARKUS_HTTP_PORT=${{PORT}}` en la UI puede resolverse a cadena vacía antes del primer arranque y romper el servicio.
 
-> `${{PORT}}` es el puerto dinámico que Railway asigna a cada servicio — Quarkus lo lee via `QUARKUS_HTTP_PORT`.
+> **Nombre del servicio MySQL**: la sintaxis `${{MySQL.VARIABLE}}` asume que Railway nombró el servicio de base de datos exactamente `MySQL`. Verifica el nombre en la esquina superior izquierda del servicio dentro del proyecto — si es diferente (ej. `mysql`), ajusta el prefijo en todas las referencias.
 
 ### Paso 5 — Desplegar
 
